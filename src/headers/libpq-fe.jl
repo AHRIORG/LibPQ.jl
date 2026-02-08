@@ -216,6 +216,11 @@ InvalidOid() = Oid(0)
     PQPING_NO_ATTEMPT,
 )
 
+@enum(PGauthData::Cuint,
+    PQAUTHDATA_PROMPT_OAUTH_DEVICE,
+    PQAUTHDATA_OAUTH_BEARER_TOKEN,
+)
+
 const PGconn = Cvoid
 
 const PGresult = Cvoid
@@ -232,9 +237,26 @@ mutable struct pgNotify
     next::Ptr{Cvoid}
 end
 
+mutable struct PGpromptOAuthDevice
+    verification_uri::Cstring
+    user_code::Cstring
+    verification_uri_complete::Cstring
+    expires_in::Cint
+end
+
+mutable struct PGoauthBearerRequest
+    openid_configuration::Cstring
+    scope::Cstring
+    async::Ptr{Cvoid}
+    cleanup::Ptr{Cvoid}
+    token::Cstring
+    user::Ptr{Cvoid}
+end
+
 const PGnotify = Cvoid
 const PQnoticeReceiver = Ptr{Cvoid}
 const PQnoticeProcessor = Ptr{Cvoid}
+const PQauthDataHook_type = Ptr{Cvoid}
 const pqbool = UInt8
 
 mutable struct _PQprintOpt
@@ -484,6 +506,18 @@ end
 
 function PQregisterThreadLock(newhandler::pgthreadlock_t)
     ccall((:PQregisterThreadLock, LIBPQ_HANDLE), pgthreadlock_t, (pgthreadlock_t,), newhandler)
+end
+
+function PQsetAuthDataHook(hook::PQauthDataHook_type)
+    ccall((:PQsetAuthDataHook, LIBPQ_HANDLE), Cvoid, (PQauthDataHook_type,), hook)
+end
+
+function PQgetAuthDataHook()
+    ccall((:PQgetAuthDataHook, LIBPQ_HANDLE), PQauthDataHook_type, ())
+end
+
+function PQdefaultAuthDataHook(type::PGauthData, conn, data)
+    ccall((:PQdefaultAuthDataHook, LIBPQ_HANDLE), Cint, (PGauthData, Ptr{PGconn}, Ptr{Cvoid}), type, conn, data)
 end
 
 function PQexec(conn, query)

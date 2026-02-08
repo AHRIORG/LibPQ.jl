@@ -60,6 +60,21 @@ This package may not:
 
 While I may never get to any of these, I welcome tested, documented contributions!
 
+## OAuth Bearer Token Hook Example
+
+```julia
+using LibPQ
+
+# Keep this fast; libpq calls it during authentication.
+LibPQ.register_oauth_bearer_token_provider!() do conn, request_ptr
+  # Return a cached token string (or `nothing` on failure).
+  return get(ENV, "PG_OAUTH_TOKEN", nothing)
+end
+
+conn = LibPQ.Connection("host=localhost dbname=postgres")
+LibPQ.close(conn)
+```
+
 ## Licenses
 
 ### `libpq` Source and PostgreSQL Documentation

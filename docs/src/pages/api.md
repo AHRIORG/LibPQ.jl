@@ -181,6 +181,25 @@ LibPQ.bytes_view
 Base.parse(::Type{Any}, pqv::LibPQ.PQValue)
 ```
 
+### Authdata Hook
+
+LibPQ exposes the libpq authdata hook API so you can supply OAuth Bearer tokens
+from Julia. The hook runs during authentication, so keep it fast and preferably
+return a cached token. Blocking work in this callback can interfere with
+nonblocking connection flows.
+
+```julia
+using LibPQ
+
+LibPQ.register_oauth_bearer_token_provider!() do conn, request_ptr
+    # Return a cached token string (or `nothing` on failure).
+    return get(ENV, "PG_OAUTH_TOKEN", nothing)
+end
+
+conn = LibPQ.Connection("host=localhost dbname=postgres")
+LibPQ.close(conn)
+```
+
 ### Miscellaneous
 
 ```@docs
@@ -188,6 +207,17 @@ LibPQ.@pqv_str
 LibPQ.string_parameters
 LibPQ.parameter_pointers
 LibPQ.unsafe_string_or_null
+LibPQ.PGauthData
+LibPQ.PGoauthBearerRequest
+LibPQ.PGpromptOAuthDevice
+LibPQ.PQAUTHDATA_PROMPT_OAUTH_DEVICE
+LibPQ.PQAUTHDATA_OAUTH_BEARER_TOKEN
+LibPQ.set_auth_data_hook!
+LibPQ.get_auth_data_hook
+LibPQ.default_auth_data_hook
+LibPQ.register_oauth_bearer_token_provider!
+LibPQ.clear_oauth_bearer_token_provider!
+LibPQ.oauth_bearer_set_token!
 ```
 
 ```@meta
