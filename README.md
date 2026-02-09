@@ -74,7 +74,10 @@ end
 conn = LibPQ.Connection("host=localhost dbname=postgres")
 LibPQ.close(conn)
 ```
-
+## Build
+```bash
+julia --project=../../.ci build_tarballs.jl --skip-build --deploy=local x86_64-linux-gnu aarch64-linux-gnu aarch64-apple-darwin x86_64-w64-mingw32
+```
 ## Licenses
 
 ### `libpq` Source and PostgreSQL Documentation
