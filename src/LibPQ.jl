@@ -47,6 +47,7 @@ const LOGGER = getlogger(@__MODULE__)
 
 function __init__()
     INTERVAL_REGEX[] = _interval_regex()
+    _init_authdata_hooks!()
     Memento.register(LOGGER)
     return nothing
 end

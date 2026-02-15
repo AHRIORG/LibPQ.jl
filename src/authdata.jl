@@ -37,6 +37,30 @@ end
 const _authdata_hook_ref = Ref{Ptr{Cvoid}}(C_NULL)
 const _oauth_bearer_provider = Ref{Union{Nothing, Function}}(nothing)
 const _oauth_token_store = IdDict{Ptr{libpq_c.PGoauthBearerRequest}, Vector{UInt8}}()
+const _oauth_cleanup_cfun_ref = Ref{Any}(nothing)
+const _oauth_cleanup_ptr = Ref{Ptr{Cvoid}}(C_NULL)
+const _authdata_hook_cfun_ref = Ref{Any}(nothing)
+const _authdata_hook_ptr = Ref{Ptr{Cvoid}}(C_NULL)
+
+function _init_authdata_hooks!()
+    cleanup_cfun = @cfunction(
+        $(_oauth_cleanup),
+        Cvoid,
+        (Ptr{libpq_c.PGconn}, Ptr{libpq_c.PGoauthBearerRequest}),
+    )
+    _oauth_cleanup_cfun_ref[] = cleanup_cfun
+    _oauth_cleanup_ptr[] = Base.unsafe_convert(Ptr{Cvoid}, cleanup_cfun)
+
+    hook_cfun = @cfunction(
+        $(_authdata_hook),
+        Cint,
+        (Cint, Ptr{libpq_c.PGconn}, Ptr{Cvoid}),
+    )
+    _authdata_hook_cfun_ref[] = hook_cfun
+    _authdata_hook_ptr[] = Base.unsafe_convert(Ptr{Cvoid}, hook_cfun)
+
+    return nothing
+end
 
 function _oauth_cleanup(conn::Ptr{libpq_c.PGconn}, request::Ptr{libpq_c.PGoauthBearerRequest})::Cvoid
     if haskey(_oauth_token_store, request)
@@ -44,12 +68,6 @@ function _oauth_cleanup(conn::Ptr{libpq_c.PGconn}, request::Ptr{libpq_c.PGoauthB
     end
     return
 end
-
-const _oauth_cleanup_ptr = @cfunction(
-    _oauth_cleanup,
-    Cvoid,
-    (Ptr{libpq_c.PGconn}, Ptr{libpq_c.PGoauthBearerRequest}),
-)
 
 """
     oauth_bearer_set_token!(request_ptr, token)
@@ -70,7 +88,7 @@ function oauth_bearer_set_token!(
         request.openid_configuration,
         request.scope,
         request.async,
-        _oauth_cleanup_ptr,
+        _oauth_cleanup_ptr[],
         pointer(token_bytes),
         request.user,
     )
@@ -79,18 +97,18 @@ function oauth_bearer_set_token!(
 end
 
 function _authdata_hook(
-    type::libpq_c.PGauthData,
+    type::Cint,
     conn::Ptr{libpq_c.PGconn},
     data::Ptr{Cvoid},
 )::Cint
     try
-        if type != libpq_c.PQAUTHDATA_OAUTH_BEARER_TOKEN
-            return libpq_c.PQdefaultAuthDataHook(type, conn, data)
+        if type != Cint(libpq_c.PQAUTHDATA_OAUTH_BEARER_TOKEN)
+            return libpq_c.PQdefaultAuthDataHook(libpq_c.PGauthData(type), conn, data)
         end
 
         provider = _oauth_bearer_provider[]
         if provider === nothing
-            return libpq_c.PQdefaultAuthDataHook(type, conn, data)
+            return libpq_c.PQdefaultAuthDataHook(libpq_c.PGauthData(type), conn, data)
         end
 
         request_ptr = Ptr{libpq_c.PGoauthBearerRequest}(data)
@@ -105,12 +123,6 @@ function _authdata_hook(
     end
 end
 
-const _authdata_hook_ptr = @cfunction(
-    _authdata_hook,
-    Cint,
-    (libpq_c.PGauthData, Ptr{libpq_c.PGconn}, Ptr{Cvoid}),
-)
-
 """
     register_oauth_bearer_token_provider!(provider)
 
@@ -123,7 +135,8 @@ nonblocking connection workflows if it performs long-running work.
 """
 function register_oauth_bearer_token_provider!(provider::Function)
     _oauth_bearer_provider[] = provider
-    set_auth_data_hook!(_authdata_hook_ptr)
+    _authdata_hook_ptr[] == C_NULL && _init_authdata_hooks!()
+    set_auth_data_hook!(_authdata_hook_ptr[])
     return
 end
 
