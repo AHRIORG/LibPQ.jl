@@ -87,7 +87,7 @@ function oauth_bearer_set_token!(
     updated = libpq_c.PGoauthBearerRequest(
         request.openid_configuration,
         request.scope,
-        request.async,
+        C_NULL,
         _oauth_cleanup_ptr[],
         pointer(token_bytes),
         request.user,
@@ -102,18 +102,24 @@ function _authdata_hook(
     data::Ptr{Cvoid},
 )::Cint
     try
+        provider = _oauth_bearer_provider[]
+
         if type != Cint(libpq_c.PQAUTHDATA_OAUTH_BEARER_TOKEN)
+            if provider !== nothing && type == Cint(libpq_c.PQAUTHDATA_PROMPT_OAUTH_DEVICE)
+                return Cint(1)
+            end
             return libpq_c.PQdefaultAuthDataHook(libpq_c.PGauthData(type), conn, data)
         end
 
-        provider = _oauth_bearer_provider[]
         if provider === nothing
             return libpq_c.PQdefaultAuthDataHook(libpq_c.PGauthData(type), conn, data)
         end
 
         request_ptr = Ptr{libpq_c.PGoauthBearerRequest}(data)
         token = provider(conn, request_ptr)
-        token === nothing && return Cint(0)
+        if token === nothing
+            return libpq_c.PQdefaultAuthDataHook(libpq_c.PGauthData(type), conn, data)
+        end
 
         oauth_bearer_set_token!(request_ptr, token)
         return Cint(1)
