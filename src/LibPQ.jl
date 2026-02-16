@@ -11,11 +11,12 @@ export status,
     PGpromptOAuthDevice,
     PQAUTHDATA_PROMPT_OAUTH_DEVICE,
     PQAUTHDATA_OAUTH_BEARER_TOKEN,
-    set_auth_data_hook!,
+    set_auth_data_hook,
     get_auth_data_hook,
     default_auth_data_hook,
-    register_oauth_bearer_token_provider!,
-    clear_oauth_bearer_token_provider!,
+    register_oauth_bearer_token_provider,
+    register_fixed_oauth_bearer_token,
+    clear_oauth_bearer_token_provider,
     oauth_bearer_set_token!,
     num_columns,
     num_rows,
@@ -47,7 +48,7 @@ const LOGGER = getlogger(@__MODULE__)
 
 function __init__()
     INTERVAL_REGEX[] = _interval_regex()
-    _init_authdata_hooks!()
+    _init_authdata_hooks()
     Memento.register(LOGGER)
     return nothing
 end
