@@ -16,6 +16,10 @@ using TimeZones
 using Tables
 using UTCDateTimes
 
+# Contributor note:
+# OAuth/authdata test commands are documented in docs/src/pages/api.md
+# under the "Testing OAuth/Authdata" section.
+
 Memento.config!("critical")
 
 macro test_broken_on_windows(ex)
@@ -40,7 +44,11 @@ function count_allocs(f, args...)
     return Base.gc_alloc_count(stats.gcstats)
 end
 
+include("test_oauth_authdata.jl")
+
 @testset "LibPQ" begin
+
+run_oauth_authdata_tests()
 
 @testset "ConninfoDisplay" begin
     @test parse(LibPQ.ConninfoDisplay, "") == LibPQ.Normal

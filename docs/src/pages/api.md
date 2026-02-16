@@ -191,13 +191,33 @@ nonblocking connection flows.
 ```julia
 using LibPQ
 
-LibPQ.register_oauth_bearer_token_provider!() do conn, request_ptr
+LibPQ.register_oauth_bearer_token_provider() do conn, request_ptr
     # Return a cached token string (or `nothing` on failure).
     return get(ENV, "PG_OAUTH_TOKEN", nothing)
 end
 
 conn = LibPQ.Connection("host=localhost dbname=postgres")
 LibPQ.close(conn)
+```
+
+### Testing OAuth/Authdata
+
+Run only the OAuth/authdata tests:
+
+```bash
+julia --project=. -e 'using LibPQ, Test; include("test/test_oauth_authdata.jl"); run_oauth_authdata_tests()'
+```
+
+Run the full LibPQ test suite against a running PostgreSQL instance:
+
+```bash
+PGHOST=tre-postgres \
+PGPORT=5432 \
+PGDATABASE=postgres \
+PGUSER=postgres \
+PGPASSWORD=postgres \
+LIBPQJL_DATABASE_USER=postgres \
+julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
 ### Miscellaneous
@@ -212,11 +232,11 @@ LibPQ.PGoauthBearerRequest
 LibPQ.PGpromptOAuthDevice
 LibPQ.PQAUTHDATA_PROMPT_OAUTH_DEVICE
 LibPQ.PQAUTHDATA_OAUTH_BEARER_TOKEN
-LibPQ.set_auth_data_hook!
+LibPQ.set_auth_data_hook
 LibPQ.get_auth_data_hook
 LibPQ.default_auth_data_hook
-LibPQ.register_oauth_bearer_token_provider!
-LibPQ.clear_oauth_bearer_token_provider!
+LibPQ.register_oauth_bearer_token_provider
+LibPQ.clear_oauth_bearer_token_provider
 LibPQ.oauth_bearer_set_token!
 ```
 

@@ -66,7 +66,7 @@ While I may never get to any of these, I welcome tested, documented contribution
 using LibPQ
 
 # Keep this fast; libpq calls it during authentication.
-LibPQ.register_oauth_bearer_token_provider!() do conn, request_ptr
+LibPQ.register_oauth_bearer_token_provider() do conn, request_ptr
   # Return a cached token string (or `nothing` on failure).
   return get(ENV, "PG_OAUTH_TOKEN", nothing)
 end
@@ -74,6 +74,27 @@ end
 conn = LibPQ.Connection("host=localhost dbname=postgres")
 LibPQ.close(conn)
 ```
+
+## Testing
+
+Run the dedicated OAuth/authdata tests only:
+
+```bash
+julia --project=. -e 'using LibPQ, Test; include("test/test_oauth_authdata.jl"); run_oauth_authdata_tests()'
+```
+
+Run the full test suite against a running PostgreSQL instance:
+
+```bash
+PGHOST=tre-postgres \
+PGPORT=5432 \
+PGDATABASE=postgres \
+PGUSER=postgres \
+PGPASSWORD=postgres \
+LIBPQJL_DATABASE_USER=postgres \
+julia --project=. -e 'using Pkg; Pkg.test()'
+```
+
 ## Build
 ```bash
 julia --project=../../.ci build_tarballs.jl --skip-build --deploy=local x86_64-linux-gnu aarch64-linux-gnu aarch64-apple-darwin x86_64-w64-mingw32
